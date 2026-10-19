@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: social
+    description: Profiles, posts, and interactions
+  - name: storage
+    description: Media uploads and delivery
 paths:
   /healthz:
     get:
@@ -24,6 +28,268 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me/profile:
+    get:
+      operationId: getMyProfile
+      tags: [social]
+      summary: Get the signed-in user's profile
+      responses:
+        "200":
+          description: Current profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Sign-in required
+    patch:
+      operationId: updateMyProfile
+      tags: [social]
+      summary: Update the signed-in user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid profile data
+        "401":
+          description: Sign-in required
+        "409":
+          description: Username is already taken
+  /feed:
+    get:
+      operationId: getFeed
+      tags: [social]
+      summary: Read recent posts
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, following]
+            default: all
+      responses:
+        "200":
+          description: Feed posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+        "401":
+          description: Sign-in required
+  /profiles/suggestions:
+    get:
+      operationId: getProfileSuggestions
+      tags: [social]
+      summary: Get people to follow
+      responses:
+        "200":
+          description: Suggested profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+        "401":
+          description: Sign-in required
+  /profiles/{username}:
+    get:
+      operationId: getProfile
+      tags: [social]
+      summary: Read a profile and its posts
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Profile and posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePage"
+        "404":
+          description: Profile not found
+        "401":
+          description: Sign-in required
+  /profiles/{username}/follow:
+    put:
+      operationId: toggleFollow
+      tags: [social]
+      summary: Follow or unfollow a profile
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated follow state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowResult"
+        "404":
+          description: Profile not found
+        "401":
+          description: Sign-in required
+  /posts:
+    post:
+      operationId: createPost
+      tags: [social]
+      summary: Create a photo or video post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "201":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          description: Invalid post data
+        "401":
+          description: Sign-in required
+  /posts/{postId}/like:
+    put:
+      operationId: toggleLike
+      tags: [social]
+      summary: Like or unlike a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated like state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeResult"
+        "404":
+          description: Post not found
+        "401":
+          description: Sign-in required
+  /posts/{postId}/comments:
+    get:
+      operationId: getComments
+      tags: [social]
+      summary: List comments on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Post comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          description: Post not found
+        "401":
+          description: Sign-in required
+    post:
+      operationId: createComment
+      tags: [social]
+      summary: Comment on a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid comment
+        "404":
+          description: Post not found
+        "401":
+          description: Sign-in required
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a media upload URL
+      description: Returns a short-lived URL for a direct upload to App Storage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid upload metadata
+        "401":
+          description: Sign-in required
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve a stored photo or video
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stored media
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Media not found
 components:
   schemas:
     HealthStatus:
@@ -33,4 +299,96 @@ components:
           type: string
       required:
         - status
+    ProfileSummary:
+      type: object
+      required: [id, username, displayName, avatarUrl]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: ["string", "null"], format: uri }
+    Profile:
+      allOf:
+        - $ref: "#/components/schemas/ProfileSummary"
+        - type: object
+          required: [bio, postsCount, followersCount, followingCount, isFollowing]
+          properties:
+            bio: { type: ["string", "null"] }
+            postsCount: { type: integer }
+            followersCount: { type: integer }
+            followingCount: { type: integer }
+            isFollowing: { type: boolean }
+    Post:
+      type: object
+      required: [id, caption, mediaPath, mediaType, createdAt, author, likesCount, commentsCount, likedByMe]
+      properties:
+        id: { type: integer }
+        caption: { type: ["string", "null"] }
+        mediaPath: { type: string }
+        mediaType: { type: string, enum: [image, video] }
+        createdAt: { type: string, format: date-time }
+        author: { $ref: "#/components/schemas/ProfileSummary" }
+        likesCount: { type: integer }
+        commentsCount: { type: integer }
+        likedByMe: { type: boolean }
+    Comment:
+      type: object
+      required: [id, text, createdAt, author]
+      properties:
+        id: { type: integer }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+        author: { $ref: "#/components/schemas/ProfileSummary" }
+    ProfilePage:
+      type: object
+      required: [profile, posts]
+      properties:
+        profile: { $ref: "#/components/schemas/Profile" }
+        posts:
+          type: array
+          items: { $ref: "#/components/schemas/Post" }
+    ProfileUpdate:
+      type: object
+      required: [username, displayName, bio, avatarUrl]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 30, pattern: "^[a-zA-Z0-9_.]+$" }
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        bio: { type: ["string", "null"], maxLength: 300 }
+        avatarUrl: { type: ["string", "null"], format: uri }
+    PostInput:
+      type: object
+      required: [mediaPath, mediaType, caption]
+      properties:
+        mediaPath: { type: string, minLength: 1 }
+        mediaType: { type: string, enum: [image, video] }
+        caption: { type: ["string", "null"], maxLength: 2200 }
+    CommentInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1, maxLength: 1000 }
+    FollowResult:
+      type: object
+      required: [following]
+      properties:
+        following: { type: boolean }
+    LikeResult:
+      type: object
+      required: [liked, likesCount]
+      properties:
+        liked: { type: boolean }
+        likesCount: { type: integer }
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: integer, minimum: 1 }
+        contentType: { type: string, minLength: 1 }
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
 

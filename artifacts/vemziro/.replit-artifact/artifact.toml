@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Vemziro"
+description = "A mobile-first social network for sharing photo and video moments, following people, and joining conversations through likes and comments."
+version = "1.0.0"
+id = "artifacts/vemziro"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19851
+
+[services.development]
+run = "pnpm --filter @workspace/vemziro run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vemziro", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vemziro/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19851"
+BASE_PATH = "/"
